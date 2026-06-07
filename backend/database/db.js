@@ -6,9 +6,9 @@ let db;
 async function initDB() {
   db = await open({
     filename:
-  process.env.NODE_ENV === "production"
-    ? "/tmp/tasks.db"
-    : "./database/tasks.db",
+      process.env.NODE_ENV === "production"
+        ? "/tmp/tasks.db"
+        : "./database/tasks.db",
     driver: sqlite3.Database,
   });
 
@@ -18,6 +18,7 @@ async function initDB() {
       title TEXT NOT NULL,
       description TEXT,
       dueDate TEXT,
+      priority TEXT,
       completed INTEGER DEFAULT 0,
       createdAt TEXT
     )
@@ -27,6 +28,7 @@ async function initDB() {
 }
 
 function getDB() {
+  if (!db) throw new Error("Database not initialized");
   return db;
 }
 

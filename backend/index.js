@@ -15,8 +15,12 @@ app.get("/", (req, res) => {
   res.send("TaskFlow API Running");
 });
 
-initDB();
+async function startServer() {
+  await initDB();
 
-app.listen(5000, () => {
-  console.log("Server running on port 5000");
-});
+  app.listen(5000, () => {
+    console.log("Server running on port 5000");
+  });
+}
+
+startServer();

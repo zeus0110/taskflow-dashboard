@@ -1,0 +1,86 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e4e4e7;
+  border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #d4d4d8;
+}
+
+/* Smooth Transitions */
+* {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, box-shadow;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* Glassmorphic Background Card Styles */
+.glass-panel {
+  background-color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(228, 228, 231, 0.6);
+}
+
+.dark .glass-panel {
+  background-color: rgba(9, 9, 11, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(39, 39, 42, 0.6);
+}
+
+/* Ambient glow effects */
+.indigo-glow {
+  box-shadow: 0 0 40px -10px rgba(99, 102, 241, 0.12);
+}
+
+.dark .indigo-glow {
+  box-shadow: 0 0 50px -5px rgba(99, 102, 241, 0.08);
+}
+
+/* Input Focus Glows */
+.input-focus {
+  outline: none;
+}
+.input-focus:focus {
+  border-color: rgba(99, 102, 241, 0.8);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.dark .input-focus:focus {
+  border-color: rgba(139, 92, 246, 0.8);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+}
+
+/* Circular Progress Style */
+.circle-progress-bg {
+  stroke: #e4e4e7;
+}
+.dark .circle-progress-bg {
+  stroke: #27272a;
+}

@@ -1,61 +1,96 @@
-const fs = require("fs");
-const path = require("path");
+const { getDB } = require("../database/db");
 const { v4: uuidv4 } = require("uuid");
 
-const filePath = path.join(__dirname, "../data/tasks.json");
+exports.getTasks = async (req, res) => {
+  try {
+    const db = getDB();
 
-const readTasks = () => {
-  const data = fs.readFileSync(filePath);
-  return JSON.parse(data);
+    const tasks = await db.all(`
+      SELECT * FROM tasks
+      ORDER BY createdAt DESC
+    `);
+
+    res.json(
+      tasks.map(task => ({
+        ...task,
+        completed: Boolean(task.completed),
+      }))
+    );
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
 
-const writeTasks = (tasks) => {
-  fs.writeFileSync(filePath, JSON.stringify(tasks, null, 2));
+exports.createTask = async (req, res) => {
+  try {
+    const db = getDB();
+
+    const newTask = {
+      id: uuidv4(),
+      ...req.body,
+      createdAt: new Date().toISOString(),
+    };
+
+    await db.run(
+      `
+      INSERT INTO tasks
+      (id, title, description, dueDate, completed, createdAt)
+      VALUES (?, ?, ?, ?, ?, ?)
+      `,
+      [
+        newTask.id,
+        newTask.title,
+        newTask.description,
+        newTask.dueDate,
+        newTask.completed ? 1 : 0,
+        newTask.createdAt,
+      ]
+    );
+
+    res.status(201).json(newTask);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
 
-exports.getTasks = (req, res) => {
-  const tasks = readTasks();
-  res.json(tasks);
+exports.updateTask = async (req, res) => {
+  try {
+    const db = getDB();
+
+    const task = req.body;
+
+    await db.run(
+      `
+      UPDATE tasks
+      SET title=?, description=?, dueDate=?, completed=?
+      WHERE id=?
+      `,
+      [
+        task.title,
+        task.description,
+        task.dueDate,
+        task.completed ? 1 : 0,
+        req.params.id,
+      ]
+    );
+
+    res.json({ message: "Task updated" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
 
-exports.createTask = (req, res) => {
-  const tasks = readTasks();
+exports.deleteTask = async (req, res) => {
+  try {
+    const db = getDB();
 
-  const newTask = {
-    id: uuidv4(),
-    ...req.body,
-    createdAt: new Date(),
-  };
+    await db.run(
+      `DELETE FROM tasks WHERE id=?`,
+      [req.params.id]
+    );
 
-  tasks.unshift(newTask);
-
-  writeTasks(tasks);
-
-  res.status(201).json(newTask);
-};
-
-exports.updateTask = (req, res) => {
-  const tasks = readTasks();
-
-  const updatedTasks = tasks.map((task) =>
-    task.id === req.params.id
-      ? { ...task, ...req.body }
-      : task
-  );
-
-  writeTasks(updatedTasks);
-
-  res.json({ message: "Task updated" });
-};
-
-exports.deleteTask = (req, res) => {
-  const tasks = readTasks();
-
-  const filteredTasks = tasks.filter(
-    (task) => task.id !== req.params.id
-  );
-
-  writeTasks(filteredTasks);
-
-  res.json({ message: "Task deleted" });
+    res.json({ message: "Task deleted" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };

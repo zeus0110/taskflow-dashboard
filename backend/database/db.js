@@ -5,7 +5,10 @@ let db;
 
 async function initDB() {
   db = await open({
-    filename: "./database/tasks.db",
+    filename:
+  process.env.NODE_ENV === "production"
+    ? "/tmp/tasks.db"
+    : "./database/tasks.db",
     driver: sqlite3.Database,
   });
 

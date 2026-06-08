@@ -1,7 +1,8 @@
-import axios from 'axios';
+import axios from "axios";
 
 const API = axios.create({
-  baseURL: 'https://taskflow-api-1sjz.onrender.com',
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000",
+  timeout: 10000
 });
 
 export default API;

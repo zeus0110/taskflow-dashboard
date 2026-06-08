@@ -1,136 +1,120 @@
-const { getDB } = require("../database/db");
-const { v4: uuidv4 } = require("uuid");
+const { readTasks, writeTasks, randomUUID } = require("../database/db");
 
-// GET ALL TASKS
+const normaliseTask = (task) => ({
+  ...task,
+  completed: Boolean(task.completed),
+  priority: task.priority || "medium",
+  description: task.description || "",
+  dueDate: task.dueDate || ""
+});
+
 exports.getTasks = async (req, res) => {
   try {
-    const db = getDB();
+    const tasks = await readTasks();
 
-    const tasks = await db.all(
-      `SELECT * FROM tasks ORDER BY createdAt DESC`
-    );
+    const sortedTasks = tasks
+      .map(normaliseTask)
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
-    res.json(
-      tasks.map((t) => ({
-        ...t,
-        completed: Boolean(t.completed),
-      }))
-    );
+    res.json(sortedTasks);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// CREATE TASK
 exports.createTask = async (req, res) => {
   try {
-    const db = getDB();
-
-    const { title, description, dueDate, priority } = req.body;
-
-    const task = {
-      id: uuidv4(),
-      title,
-      description,
-      dueDate,
-      priority,
-      completed: 0,
-      createdAt: new Date().toISOString(),
-    };
-
-    await db.run(
-      `INSERT INTO tasks 
-      (id, title, description, dueDate, priority, completed, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [
-        task.id,
-        task.title,
-        task.description,
-        task.dueDate,
-        task.priority,
-        task.completed,
-        task.createdAt,
-      ]
-    );
-
-    res.status(201).json(task);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-// UPDATE TASK
-exports.updateTask = async (req, res) => {
-  try {
-    const db = getDB();
-    const id = req.params.id;
-
-    const existing = await db.get(
-      `SELECT * FROM tasks WHERE id = ?`,
-      [id]
-    );
-
-    if (!existing) {
-      return res.status(404).json({ message: "Task not found" });
-    }
-
     const {
       title,
-      description,
-      dueDate,
-      priority,
-      completed,
+      description = "",
+      dueDate = "",
+      priority = "medium"
     } = req.body;
 
-    const updated = {
-      title: title ?? existing.title,
-      description: description ?? existing.description,
-      dueDate: dueDate ?? existing.dueDate,
-      priority: priority ?? existing.priority,
-      completed:
-        completed !== undefined
-          ? completed
-            ? 1
-            : 0
-          : existing.completed,
+    if (!title || !title.trim()) {
+      return res.status(400).json({ message: "Task title is required" });
+    }
+
+    const task = {
+      id: randomUUID(),
+      title: title.trim(),
+      description: String(description || "").trim(),
+      dueDate,
+      priority,
+      completed: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
 
-    const result = await db.run(
-      `UPDATE tasks
-       SET title=?, description=?, dueDate=?, priority=?, completed=?
-       WHERE id=?`,
-      [
-        updated.title,
-        updated.description,
-        updated.dueDate,
-        updated.priority,
-        updated.completed,
-        id,
-      ]
-    );
+    const tasks = await readTasks();
+    tasks.push(task);
+    await writeTasks(tasks);
 
-    res.json({
-      message: "Task updated successfully",
-      changes: result.changes,
-    });
+    res.status(201).json(normaliseTask(task));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// DELETE TASK
-exports.deleteTask = async (req, res) => {
+exports.updateTask = async (req, res) => {
   try {
-    const db = getDB();
+    const tasks = await readTasks();
+    const index = tasks.findIndex((task) => task.id === req.params.id);
 
-    const result = await db.run(
-      `DELETE FROM tasks WHERE id = ?`,
-      [req.params.id]
-    );
-
-    if (result.changes === 0) {
+    if (index === -1) {
       return res.status(404).json({ message: "Task not found" });
     }
+
+    const existing = tasks[index];
+
+    const updated = {
+      ...existing,
+      title:
+        req.body.title !== undefined
+          ? String(req.body.title).trim()
+          : existing.title,
+      description:
+        req.body.description !== undefined
+          ? String(req.body.description || "").trim()
+          : existing.description,
+      dueDate:
+        req.body.dueDate !== undefined
+          ? req.body.dueDate
+          : existing.dueDate,
+      priority:
+        req.body.priority !== undefined
+          ? req.body.priority
+          : existing.priority,
+      completed:
+        req.body.completed !== undefined
+          ? Boolean(req.body.completed)
+          : Boolean(existing.completed),
+      updatedAt: new Date().toISOString()
+    };
+
+    if (!updated.title) {
+      return res.status(400).json({ message: "Task title is required" });
+    }
+
+    tasks[index] = updated;
+    await writeTasks(tasks);
+
+    res.json(normaliseTask(updated));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.deleteTask = async (req, res) => {
+  try {
+    const tasks = await readTasks();
+    const filteredTasks = tasks.filter((task) => task.id !== req.params.id);
+
+    if (filteredTasks.length === tasks.length) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    await writeTasks(filteredTasks);
 
     res.json({ message: "Task deleted successfully" });
   } catch (err) {

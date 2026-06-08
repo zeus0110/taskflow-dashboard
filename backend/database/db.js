@@ -1,35 +1,42 @@
-const sqlite3 = require("sqlite3");
-const { open } = require("sqlite");
+const fs = require("fs/promises");
+const path = require("path");
+const { randomUUID } = require("crypto");
 
-let db;
+const DATA_DIR = path.join(__dirname, "..", "data");
+const DATA_FILE = path.join(DATA_DIR, "tasks.json");
 
 async function initDB() {
-  db = await open({
-    filename:
-      process.env.NODE_ENV === "production"
-        ? "/tmp/tasks.db"
-        : "./database/tasks.db",
-    driver: sqlite3.Database,
-  });
+  await fs.mkdir(DATA_DIR, { recursive: true });
 
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS tasks (
-      id TEXT PRIMARY KEY,
-      title TEXT NOT NULL,
-      description TEXT,
-      dueDate TEXT,
-      priority TEXT,
-      completed INTEGER DEFAULT 0,
-      createdAt TEXT
-    )
-  `);
+  try {
+    await fs.access(DATA_FILE);
+  } catch {
+    await fs.writeFile(DATA_FILE, "[]", "utf8");
+  }
 
-  console.log("SQLite connected");
+  console.log("JSON task store ready");
 }
 
-function getDB() {
-  if (!db) throw new Error("Database not initialized");
-  return db;
+async function readTasks() {
+  await initDB();
+
+  const raw = await fs.readFile(DATA_FILE, "utf8");
+
+  try {
+    const tasks = JSON.parse(raw);
+    return Array.isArray(tasks) ? tasks : [];
+  } catch {
+    return [];
+  }
 }
 
-module.exports = { initDB, getDB };
+async function writeTasks(tasks) {
+  await fs.writeFile(DATA_FILE, JSON.stringify(tasks, null, 2), "utf8");
+}
+
+module.exports = {
+  initDB,
+  readTasks,
+  writeTasks,
+  randomUUID
+};
